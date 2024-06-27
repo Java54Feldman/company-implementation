@@ -71,11 +71,10 @@ public class CompanyMapsImpl implements Company {
 		}
 	}
 	private <K, V extends Employee> void removeFromIndexMap(Map<K, List<V>> map, K key, V empl) {
-		List<V> list = map.get(key);
-		list.remove(empl);
-		if(list.isEmpty()) {
-			map.remove(key);
-		}
+		map.computeIfPresent(key, (k, v) -> {
+			v.remove(empl);
+			return v.isEmpty() ? null : v;
+		});
 		
 	}
 	private <K, V extends Employee> void addToIndexMap(Map<K, List<V>> map, K key, V empl) {
