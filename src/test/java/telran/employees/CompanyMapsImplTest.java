@@ -7,6 +7,7 @@ public class CompanyMapsImplTest extends CompanyTest {
 	@BeforeEach
 	void setCompany() {
 		company = new CompanyMapsImpl();
+		super.setCompany();
 	}
 
 }
