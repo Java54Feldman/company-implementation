@@ -1,5 +1,7 @@
 package telran.employees;
 
+import org.json.JSONObject;
+
 public class WageEmployee extends Employee {
 	private int hours;
 	private int wage; //one hour salary cost
@@ -23,6 +25,14 @@ public class WageEmployee extends Employee {
 	@Override // желательно всегда писать такую аннотацию, если мы переписываем метод
 	public int computeSalary() { // 
 		return super.computeSalary() + wage * hours;
+	}
+	@Override
+	protected void fillJSONObject(JSONObject jsonObject) {
+		//TODO
+	}
+	@Override
+	protected void fillEmployee(JSONObject jsonObject) {
+		//TODO
 	}
 	
 }
