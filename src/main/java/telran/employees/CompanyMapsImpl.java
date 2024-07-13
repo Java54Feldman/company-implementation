@@ -1,76 +1,101 @@
 package telran.employees;
 
+import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import telran.io.Persistable;
 
 //So far we do consider optimization
-public class CompanyMapsImpl implements Company {
+public class CompanyMapsImpl implements Company, Persistable {
 	TreeMap<Long, Employee> employees = new TreeMap<>();
 	HashMap<String, List<Employee>> employeesDepartment = new HashMap<>();
 	TreeMap<Float, List<Manager>> factorManagers = new TreeMap<>();
 
+	private class CompanyIterator implements Iterator<Employee> {
+		Iterator<Employee> iterator = employees.values().iterator();
+		Employee prev;
+
+		@Override
+		public boolean hasNext() {
+
+			return iterator.hasNext();
+		}
+
+		@Override
+		public Employee next() {
+			prev = iterator.next();
+			return prev;
+		}
+
+		@Override
+		public void remove() {
+			iterator.remove();
+			removeFromIndexMaps(prev);
+		}
+
+	}
+
 	@Override
 	public Iterator<Employee> iterator() {
-		return employees.values().iterator();
+
+		return new CompanyIterator();
 	}
 
 	@Override
 	public void addEmployee(Employee empl) {
-		Employee newEmpl = employees.putIfAbsent(empl.getId(), empl);
-		if (newEmpl != null) {
+		if (employees.putIfAbsent(empl.getId(), empl) != null) {
 			throw new IllegalStateException();
 		}
-		addToDepartment(empl);
-		addToManagers(empl);
-
-	}
-
-	private void addToManagers(Employee empl) {
+		addToIndexMap(employeesDepartment, empl.getDepartment(), empl);
 		if (empl instanceof Manager) {
-			factorManagers.computeIfAbsent(((Manager) empl).getFactor(), k -> new LinkedList<Manager>())
-					.add((Manager) empl);
+			Manager manager = (Manager) empl;
+			addToIndexMap(factorManagers, manager.factor, manager);
 		}
-
-	}
-
-	private void addToDepartment(Employee empl) {
-		employeesDepartment.computeIfAbsent(empl.getDepartment(), k -> new LinkedList<Employee>()).add(empl);
 
 	}
 
 	@Override
 	public Employee getEmployee(long id) {
+
 		return employees.get(id);
 	}
 
 	@Override
 	public Employee removeEmployee(long id) {
-		Employee removed = getEmployee(id);
-		if(removed == null) {
+		Employee empl = employees.remove(id);
+		if (empl == null) {
 			throw new NoSuchElementException();
 		}
-		employees.remove(id);
-		if (removed instanceof Manager) {
-			List<Manager> managerList = factorManagers.get(removed.getDepartment());
-			managerList.remove(removed);
-			removeFactor(((Manager) removed).getFactor());
-		}
-		return removed;
+		removeFromIndexMaps(empl);
+		return empl;
 	}
 
-	private void removeFactor(float factor) {
-		if(factorManagers.get(factor) == null) {
-			factorManagers.remove(factor);
+	private void removeFromIndexMaps(Employee empl) {
+		removeFromIndexMap(employeesDepartment, empl.getDepartment(), empl);
+		if (empl instanceof Manager) {
+			Manager manager = (Manager) empl;
+			removeFromIndexMap(factorManagers, manager.factor, manager);
 		}
-		
+	}
+
+	private <K, V extends Employee> void removeFromIndexMap(Map<K, List<V>> map, K key, V empl) {
+		map.computeIfPresent(key, (k, v) -> {
+			v.remove(empl);
+			return v.isEmpty() ? null : v;
+		});
+
+	}
+
+	private <K, V extends Employee> void addToIndexMap(Map<K, List<V>> map, K key, V empl) {
+		map.computeIfAbsent(key, k -> new ArrayList<>()).add(empl);
+
 	}
 
 	@Override
 	public int getDepartmentBudget(String department) {
-		int res = 0;
-		if (employeesDepartment.get(department) != null) {
-			res = employeesDepartment.get(department).stream().mapToInt(Employee::computeSalary).sum();
-		}
-		return res;
+		return employeesDepartment.getOrDefault(department, Collections.emptyList()).stream()
+				.collect(Collectors.summingInt(Employee::computeSalary));
 	}
 
 	@Override
@@ -81,11 +106,31 @@ public class CompanyMapsImpl implements Company {
 	@Override
 	public Manager[] getManagersWithMostFactor() {
 		Manager[] res = new Manager[0];
-		if(!factorManagers.isEmpty()) {
-			float mostFactor = factorManagers.lastKey(); 
-			res = factorManagers.get(mostFactor).stream().toArray(Manager[]::new);
+		if (!factorManagers.isEmpty()) {
+			res = factorManagers.lastEntry().getValue().toArray(res);
 		}
 		return res;
+	}
+
+	@Override
+	public void save(String filePathStr) throws Exception {
+		try (PrintWriter writer = new PrintWriter(filePathStr)) {
+			for (Employee empl : this) {
+				writer.println(empl.getJSON());
+			}
+		}
+	}
+
+	@Override
+	public void restore(String filePathStr) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new FileReader(filePathStr))) {
+			String line;
+			while((line = reader.readLine()) != null) {
+				Employee empl = (Employee) new Employee().setObject(line);
+	            addEmployee(empl);
+			}
+		}
+
 	}
 
 }

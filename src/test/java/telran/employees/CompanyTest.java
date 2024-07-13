@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
 
+import telran.io.Persistable;
 
 abstract class CompanyTest {
 	private static final long ID1 = 123;
@@ -30,28 +31,27 @@ abstract class CompanyTest {
 	private static final float FACTOR3 = 3;
 	private static final long ID6 = 400;
 	private static final long ID7 = 500;
+	private static final String EMPLOYEES_TEST_FILE = "employeesTest.data";
 	Employee empl1 = new WageEmployee(ID1, SALARY1, DEPARTMENT1, WAGE1, HOURS1);
 	Employee empl2 = new Manager(ID2, SALARY2, DEPARTMENT1, FACTOR1);
 	Employee empl3 = new SalesPerson(ID3, SALARY3, DEPARTMENT2, WAGE1, HOURS1, PERCENT1, SALES1);
 	protected Company company;
 
 	void setCompany() {
-		// before each test there will be create new object company
+		// before each test there will be created new object company
 		// with array of the given employee objects
-		for(Employee empl: new Employee[] {empl1, empl2, empl3}) {
+		for (Employee empl : new Employee[] { empl1, empl2, empl3 }) {
 			company.addEmployee(empl);
 		}
+		;
 	}
 
 	@Test
-	void testAddEmployee()
-	{
+	void testAddEmployee() {
 		Employee empl = new Employee(ID4, SALARY1, DEPARTMENT1);
 		company.addEmployee(empl);
-		assertThrowsExactly(IllegalStateException.class,
-				() -> company.addEmployee(empl));
-//		assertThrowsExactly(IllegalStateException.class,
-//				() -> company.addEmployee(empl1));
+		assertThrowsExactly(IllegalStateException.class, () -> company.addEmployee(empl));
+		assertThrowsExactly(IllegalStateException.class, () -> company.addEmployee(empl1));
 	}
 
 	@Test
@@ -63,8 +63,7 @@ abstract class CompanyTest {
 	@Test
 	void testRemoveEmployee() {
 		assertEquals(empl1, company.removeEmployee(ID1));
-		assertThrowsExactly(NoSuchElementException.class,
-				() -> company.removeEmployee(ID1));
+		assertThrowsExactly(NoSuchElementException.class, () -> company.removeEmployee(ID1));
 	}
 
 	@Test
@@ -76,32 +75,71 @@ abstract class CompanyTest {
 
 	@Test
 	void testIterator() {
-		Employee[] expected = {empl2, empl1, empl3};
+		Employee[] expected = { empl2, empl1, empl3 };
 		Iterator<Employee> it = company.iterator();
 		int index = 0;
-		while(it.hasNext()) {
+		while (it.hasNext()) {
 			assertEquals(expected[index++], it.next());
 		}
 		assertEquals(expected.length, index);
 		assertThrowsExactly(NoSuchElementException.class, it::next);
 	}
+
 	@Test
 	void testGetDepartments() {
-		String [] expected = {DEPARTMENT1, DEPARTMENT2};
+		String[] expected = { DEPARTMENT1, DEPARTMENT2 };
 		Arrays.sort(expected);
 		assertArrayEquals(expected, company.getDepartments());
+		expected = new String[] { DEPARTMENT1 };
+		company.removeEmployee(ID3);
+		assertArrayEquals(expected, company.getDepartments());
 	}
+
 	@Test
 	void testGetManagersWithMostFactor() {
 		company.addEmployee(new Manager(ID4, SALARY1, DEPARTMENT1, FACTOR2));
-		Manager[] managersExpected = {new Manager(ID5, SALARY1, DEPARTMENT1, FACTOR3),
-		new Manager(ID6, SALARY1, DEPARTMENT1, FACTOR3),
-		new Manager(ID7, SALARY1, DEPARTMENT2, FACTOR3)
-		};
-		for(Manager mng: managersExpected) {
+		Manager[] managersExpected = { new Manager(ID5, SALARY1, DEPARTMENT1, FACTOR3),
+				new Manager(ID6, SALARY1, DEPARTMENT1, FACTOR3), new Manager(ID7, SALARY1, DEPARTMENT2, FACTOR3) };
+		for (Manager mng : managersExpected) {
 			company.addEmployee(mng);
 		}
 		assertArrayEquals(managersExpected, company.getManagersWithMostFactor());
+		company.removeEmployee(ID4);
+		company.removeEmployee(ID5);
+		company.removeEmployee(ID6);
+		company.removeEmployee(ID7);
+		assertArrayEquals(new Manager[] { (Manager) empl2 }, company.getManagersWithMostFactor());
+		company.removeEmployee(ID2);
+		assertArrayEquals(new Manager[0], company.getManagersWithMostFactor());
+
 	}
 
+	@Test
+	void iteratorRemoveTest() {
+		Iterator<Employee> it = company.iterator();
+		while (it.hasNext()) {
+			Employee empl = it.next();
+			if (empl.computeSalary() > 2000) {
+				it.remove();
+			}
+		}
+		assertThrowsExactly(IllegalStateException.class, it::remove);
+		assertThrowsExactly(NoSuchElementException.class, () -> company.removeEmployee(ID2));
+		assertThrowsExactly(NoSuchElementException.class, () -> company.removeEmployee(ID3));
+		assertEquals(0, company.getDepartmentBudget(DEPARTMENT2));
+		assertArrayEquals(new Manager[0], company.getManagersWithMostFactor());
+		assertArrayEquals(new String[] { DEPARTMENT1 }, company.getDepartments());
+	}
+	
+	@Test
+	void persistableTest() throws Exception {
+		if (company instanceof Persistable) {
+			((Persistable)company).save(EMPLOYEES_TEST_FILE);
+			Company companyTest = getEmptyCompany();
+			((Persistable)companyTest).restore(EMPLOYEES_TEST_FILE);
+			assertIterableEquals(company, companyTest);
+		}
+	}
+
+	protected abstract Company getEmptyCompany();
 }
