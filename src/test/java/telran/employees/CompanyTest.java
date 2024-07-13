@@ -132,11 +132,11 @@ abstract class CompanyTest {
 	}
 	
 	@Test
-	void persistableTest() {
+	void persistableTest() throws Exception {
 		if (company instanceof Persistable) {
 			((Persistable)company).save(EMPLOYEES_TEST_FILE);
 			Company companyTest = getEmptyCompany();
-			((Persistable)company).restore(EMPLOYEES_TEST_FILE);
+			((Persistable)companyTest).restore(EMPLOYEES_TEST_FILE);
 			assertIterableEquals(company, companyTest);
 		}
 	}

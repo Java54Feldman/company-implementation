@@ -6,6 +6,9 @@ public class SalesPerson extends WageEmployee {
 	private float percent;
 	private long sales;
 	//Constructor of class SalesPerson must take additional parametres (see UML schema)
+	public SalesPerson() {
+		
+	}
 	public SalesPerson(long id, int basicSalary, String department, int hours, int wage, float percent, long sales) {
 		super(id, basicSalary, department, hours, wage);
 		this.percent = percent;
@@ -31,11 +34,16 @@ public class SalesPerson extends WageEmployee {
 	}
 	@Override
 	protected void fillJSONObject(JSONObject jsonObject) {
-		//TODO
+		fillClassName(jsonObject);
+		super.fillJSONObject(jsonObject);
+		jsonObject.put("percent", percent);
+		jsonObject.put("sales", sales);
 	}
 	@Override
 	protected void fillEmployee(JSONObject jsonObject) {
-		//TODO
+		super.fillEmployee(jsonObject);
+		percent = jsonObject.getFloat("percent");
+		sales = jsonObject.getLong("sales");
 	}
 
 }

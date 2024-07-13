@@ -5,6 +5,9 @@ import org.json.JSONObject;
 public class Manager extends Employee {
 	protected float factor;
 	//Constructor of class Manager must take factor (see UML schema)
+	public Manager() {
+		
+	};
 	public Manager(long id, int basicSalary, String department, float factor) {
 		super(id, basicSalary, department);
 		this.factor = factor;
